@@ -35,6 +35,7 @@ fun AuthScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var selectedMood by remember { mutableStateOf("neutral") }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showErrorDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     val moods = listOf(
@@ -49,16 +50,15 @@ fun AuthScreen(
             .fillMaxSize()
             .background(BackgroundLight)
     ) {
-        // Background Watermark (Widened and Shortened)
+        // Background Watermark (Perfectly Centered and Large)
         Image(
             painter = painterResource(id = R.drawable.bg_qr),
             contentDescription = null,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(450.dp)
-                .align(Alignment.Center),
-            contentScale = ContentScale.Crop,
-            alpha = 0.5f
+                .fillMaxSize()
+                .padding(bottom = 80.dp), // Visual adjustment to push it slightly lower, but keeping it centered in Box
+            contentScale = ContentScale.Fit,
+            alpha = 0.25f
         )
 
         Column(
@@ -163,8 +163,10 @@ fun AuthScreen(
 
                     Button(
                         onClick = {
-                            if (code.isNotBlank()) {
-                                onNavigateToQr(code, selectedMood)
+                            if (code == "debug" || code == "nFuvUG6qzp3s") {
+                                onNavigateToQr("nFuvUG6qzp3s", selectedMood)
+                            } else {
+                                showErrorDialog = true
                             }
                         },
                         modifier = Modifier
@@ -196,13 +198,40 @@ fun AuthScreen(
         }
     }
 
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            title = { Text(text = "Ошибка доступа", fontWeight = FontWeight.Bold) },
+            text = { Text(text = "Введен неверный уникальный код. Пожалуйста, проверьте данные и попробуйте снова.") },
+            confirmButton = {
+                TextButton(onClick = { showErrorDialog = false }) {
+                    Text("ОК", color = AuthCardBlue)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White
+        )
+    }
+
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.0.3 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.0.4 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = "• Новая иконка приложения\n" +
+                               "• Улучшен дизайн фона (центровка QR)\n" +
+                               "• Исправлено отображение профиля\n" +
+                               "• Меню «О приложении» теперь в карточке\n" +
+                               "• Добавлен дебаг-вход и проверка кода\n" +
+                               "• Новое окно ошибки при входе",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Пользовательское соглашение:\n\nИспользуя это приложение, вы соглашаетесь с условиями хранения и обработки ваших данных в соответствии с политикой конфиденциальности учебного заведения.\n\nРазработано для студентов ПЭК ГГТУ.",

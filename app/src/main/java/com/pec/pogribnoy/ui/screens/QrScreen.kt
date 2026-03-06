@@ -184,7 +184,19 @@ fun QrScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.0.3 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.0.4 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = "• Новая иконка приложения\n" +
+                               "• Улучшен дизайн фона (центровка QR)\n" +
+                               "• Исправлено отображение профиля\n" +
+                               "• Меню «О приложении» теперь в карточке\n" +
+                               "• Добавлен дебаг-вход и проверка кода\n" +
+                               "• Новое окно ошибки при входе",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Пользовательское соглашение:\n\nИспользуя это приложение, вы соглашаетесь с условиями хранения и обработки ваших данных в соответствии с политикой конфиденциальности учебного заведения.\n\nРазработано для студентов ПЭК ГГТУ.",
