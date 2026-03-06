@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.clickable
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -100,18 +100,16 @@ fun QrScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Avatar Area
-                if (avatarUri != null) {
-                    AsyncImage(
-                        model = avatarUri,
-                        contentDescription = "Profile Picture",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(140.dp)
-                            .clip(RoundedCornerShape(24.dp))
-                    )
-                } else {
-                    InitialsAvatar(name = "Погрибной Максим", size = 140.dp)
-                }
+                SubcomposeAsyncImage(
+                    model = avatarUri ?: "",
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(140.dp)
+                        .clip(RoundedCornerShape(24.dp)),
+                    loading = { InitialsAvatar(name = "Погрибной Максим", size = 140.dp) },
+                    error = { InitialsAvatar(name = "Погрибной Максим", size = 140.dp) }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -186,7 +184,7 @@ fun QrScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.0.2 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.0.3 (Stable)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Пользовательское соглашение:\n\nИспользуя это приложение, вы соглашаетесь с условиями хранения и обработки ваших данных в соответствии с политикой конфиденциальности учебного заведения.\n\nРазработано для студентов ПЭК ГГТУ.",

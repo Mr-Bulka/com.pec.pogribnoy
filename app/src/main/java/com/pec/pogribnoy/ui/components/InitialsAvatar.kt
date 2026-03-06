@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.border
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,19 +26,20 @@ fun InitialsAvatar(
     val initials = name.split(" ")
         .filter { it.isNotBlank() }
         .take(2)
-        .map { it.first().uppercase() }
+        .map { it.firstOrNull()?.uppercase() ?: "" }
         .joinToString("")
 
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFFE0E0E0)), // Light Gray background
+            .clip(RoundedCornerShape(size * 0.2f))
+            .background(QrCardBlue)
+            .border(2.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(size * 0.2f)),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = initials,
-            color = QrCardBlue, // Corrected color reference
+            color = Color.White,
             fontSize = (size.value * 0.4).sp,
             fontWeight = FontWeight.Bold
         )

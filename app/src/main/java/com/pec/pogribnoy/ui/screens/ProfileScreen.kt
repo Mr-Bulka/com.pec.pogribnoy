@@ -23,7 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.pec.pogribnoy.ui.theme.BackgroundLight
 import com.pec.pogribnoy.ui.theme.ButtonTeal
 import com.pec.pogribnoy.ui.theme.TextWhite
@@ -76,18 +76,16 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Avatar
-            if (avatarUri != null) {
-                AsyncImage(
-                    model = avatarUri,
-                    contentDescription = "Profile Picture",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(160.dp)
-                        .clip(RoundedCornerShape(32.dp))
-                )
-            } else {
-                InitialsAvatar(name = "Погрибной Максим", size = 160.dp)
-            }
+            SubcomposeAsyncImage(
+                model = avatarUri ?: "",
+                contentDescription = "Profile Picture",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(160.dp)
+                    .clip(RoundedCornerShape(32.dp)),
+                loading = { InitialsAvatar(name = "Погрибной Максим", size = 160.dp) },
+                error = { InitialsAvatar(name = "Погрибной Максим", size = 160.dp) }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -178,7 +176,7 @@ fun ProfileScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.0.2 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.0.3 (Stable)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Пользовательское соглашение:\n\nИспользуя это приложение, вы соглашаетесь с условиями хранения и обработки ваших данных в соответствии с политикой конфиденциальности учебного заведения.\n\nРазработано для студентов ПЭК ГГТУ.",

@@ -34,6 +34,7 @@ fun AuthScreen(
     var code by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var selectedMood by remember { mutableStateOf("neutral") }
+    var showAboutDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     val moods = listOf(
@@ -187,10 +188,35 @@ fun AuthScreen(
                     Text(
                         text = "О приложении",
                         color = TextWhite.copy(alpha = 0.8f),
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        modifier = Modifier.clickable { showAboutDialog = true }
                     )
                 }
             }
         }
+    }
+
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(text = "Версия: 1.0.3 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Пользовательское соглашение:\n\nИспользуя это приложение, вы соглашаетесь с условиями хранения и обработки ваших данных в соответствии с политикой конфиденциальности учебного заведения.\n\nРазработано для студентов ПЭК ГГТУ.",
+                        fontSize = 14.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutDialog = false }) {
+                    Text("Понятно", color = AuthCardBlue)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White
+        )
     }
 }
