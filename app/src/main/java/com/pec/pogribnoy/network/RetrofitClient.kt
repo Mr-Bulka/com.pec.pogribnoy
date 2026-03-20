@@ -7,7 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
     // 10.0.2.2 is the special IP to access your host machine's localhost from Android Emulator
-    private const val BASE_URL = "http://10.0.2.2:8000/"
+    private const val BASE_URL = "https://qr-app-server-g8wx.onrender.com/"
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
