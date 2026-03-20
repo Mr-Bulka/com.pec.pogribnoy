@@ -51,7 +51,7 @@ students_db = {
         course="2",
         hash="hash_i_i_2026"
     ),
-    "v3X8dK9mLp7q": Student(
+    "r5Z2fN6hJt4w": Student(
         id="r5Z2fN6hJt4w",
         full_name="Васильева Екатерина Максимовна",
         organization="ГГТУ Промышленно-экономический колледж",
