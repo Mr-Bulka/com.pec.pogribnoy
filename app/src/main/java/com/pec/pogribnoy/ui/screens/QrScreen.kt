@@ -46,6 +46,9 @@ import com.pec.pogribnoy.ui.theme.MoodNeutral
 import com.pec.pogribnoy.ui.theme.MoodTired
 
 import com.pec.pogribnoy.ui.components.InitialsAvatar
+import com.pec.pogribnoy.network.RetrofitClient
+import com.pec.pogribnoy.network.StudentDto
+import kotlinx.coroutines.launch
 
 @Composable
 fun QrScreen(
@@ -56,6 +59,21 @@ fun QrScreen(
 ) {
     val context = LocalContext.current
     var showAboutDialog by remember { mutableStateOf(false) }
+    var student by remember { mutableStateOf<StudentDto?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uniqueCode) {
+        scope.launch {
+            try {
+                student = RetrofitClient.apiService.getStudent(uniqueCode)
+                isLoading = false
+            } catch (e: Exception) {
+                isLoading = false
+                // Non-fatal error, display will use uniqueCode fallback
+            }
+        }
+    }
 
     val qrColor = when (mood) {
         "sleepy" -> AndroidColor.parseColor("#1A237E") // Dark Blue
@@ -64,9 +82,11 @@ fun QrScreen(
         else -> AndroidColor.BLACK
     }
     
-    val qrBitmap = remember(uniqueCode, qrColor) {
+    val qrBitmap = remember(student, qrColor) {
         val logo = BitmapFactory.decodeResource(context.resources, R.drawable.ic_logo)
-        generateQrCodeWithLogo(uniqueCode, logo, qrColor)
+        // Use hash if available, otherwise fallback to code
+        val qrContent = student?.hash ?: uniqueCode
+        generateQrCodeWithLogo(qrContent, logo, qrColor)
     }
     Box(
         modifier = Modifier
@@ -107,18 +127,23 @@ fun QrScreen(
                     modifier = Modifier
                         .size(140.dp)
                         .clip(RoundedCornerShape(24.dp)),
-                    loading = { InitialsAvatar(name = "Погрибной Максим", size = 140.dp) },
-                    error = { InitialsAvatar(name = "Погрибной Максим", size = 140.dp) }
+                    loading = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 140.dp) },
+                    error = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 140.dp) }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "Погрибной Максим",
-                    color = TextWhite,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(color = TextWhite)
+                } else {
+                    Text(
+                        text = student?.fullName?.split(" ")?.take(2)?.joinToString(" ") ?: "Студент",
+                        color = TextWhite,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Normal,
+                        textAlign = TextAlign.Center
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -184,16 +209,15 @@ fun QrScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.0.4 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.1.0 (Public Cloud Build)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = "• Новая иконка приложения\n" +
-                               "• Улучшен дизайн фона (центровка QR)\n" +
-                               "• Исправлено отображение профиля\n" +
-                               "• Меню «О приложении» теперь в карточке\n" +
-                               "• Добавлен дебаг-вход и проверка кода\n" +
-                               "• Новое окно ошибки при входе",
+                        text = "• Поддержка единого облачного бэкенда\n" +
+                                "• Переход на API v1 (/api/qr/)\n" +
+                                "• Улучшена стабильность сетевых запросов\n" +
+                                "• Оптимизация генерации QR-кодов\n" +
+                                "• Подготовлен к масштабированию системы",
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )

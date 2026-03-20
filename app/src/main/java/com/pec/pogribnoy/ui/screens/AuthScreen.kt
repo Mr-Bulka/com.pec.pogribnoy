@@ -21,10 +21,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.pec.pogribnoy.R
 import com.pec.pogribnoy.ui.theme.*
-import com.pec.pogribnoy.ui.theme.MoodSleepy
-import com.pec.pogribnoy.ui.theme.MoodHappy
-import com.pec.pogribnoy.ui.theme.MoodNeutral
-import com.pec.pogribnoy.ui.theme.MoodTired
+import com.pec.pogribnoy.network.RetrofitClient
+import com.pec.pogribnoy.network.LoginRequestDto
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +35,7 @@ fun AuthScreen(
     var selectedMood by remember { mutableStateOf("neutral") }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
 
     val moods = listOf(
@@ -50,13 +50,13 @@ fun AuthScreen(
             .fillMaxSize()
             .background(BackgroundLight)
     ) {
-        // Background Watermark (Perfectly Centered and Large)
+        // Background Watermark
         Image(
             painter = painterResource(id = R.drawable.bg_qr),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 80.dp), // Visual adjustment to push it slightly lower, but keeping it centered in Box
+                .padding(bottom = 80.dp),
             contentScale = ContentScale.Fit,
             alpha = 0.25f
         )
@@ -161,14 +161,41 @@ fun AuthScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    val scope = rememberCoroutineScope()
+                    var isLoading by remember { mutableStateOf(false) }
+
                     Button(
                         onClick = {
-                            if (code == "debug" || code == "nFuvUG6qzp3s") {
-                                onNavigateToQr("nFuvUG6qzp3s", selectedMood)
-                            } else {
-                                showErrorDialog = true
+                            isLoading = true
+                            scope.launch {
+                                try {
+                                    val response = RetrofitClient.apiService.login(
+                                        LoginRequestDto(code, selectedMood)
+                                    )
+                                    isLoading = false
+                                    val safeId = response.id ?: ""
+                                    if (safeId.isNotEmpty()) {
+                                        onNavigateToQr(safeId, selectedMood)
+                                    } else {
+                                        errorMessage = "Ошибка сервера: пустой ID пользователя"
+                                        showErrorDialog = true
+                                    }
+                                } catch (e: java.net.ConnectException) {
+                                    isLoading = false
+                                    errorMessage = "Не удалось подключиться к серверу. Убедитесь, что сервер запущен и адрес IP верен."
+                                    showErrorDialog = true
+                                } catch (e: retrofit2.HttpException) {
+                                    isLoading = false
+                                    errorMessage = if (e.code() == 401) "Неверный уникальный код" else "Ошибка сервера: ${e.code()}"
+                                    showErrorDialog = true
+                                } catch (e: Exception) {
+                                    isLoading = false
+                                    errorMessage = "Произошла непредвиденная ошибка: ${e.localizedMessage}"
+                                    showErrorDialog = true
+                                }
                             }
                         },
+                        enabled = !isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(60.dp),
@@ -178,11 +205,15 @@ fun AuthScreen(
                             contentColor = TextWhite
                         )
                     ) {
-                        Text(
-                            text = "Войти",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Normal
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(color = TextWhite, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text(
+                                text = "Войти",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -201,8 +232,8 @@ fun AuthScreen(
     if (showErrorDialog) {
         AlertDialog(
             onDismissRequest = { showErrorDialog = false },
-            title = { Text(text = "Ошибка доступа", fontWeight = FontWeight.Bold) },
-            text = { Text(text = "Введен неверный уникальный код. Пожалуйста, проверьте данные и попробуйте снова.") },
+            title = { Text(text = "Ошибка", fontWeight = FontWeight.Bold) },
+            text = { Text(text = errorMessage) },
             confirmButton = {
                 TextButton(onClick = { showErrorDialog = false }) {
                     Text("ОК", color = AuthCardBlue)
@@ -219,16 +250,15 @@ fun AuthScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.0.4 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.1.0 (Public Cloud Build)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = "• Новая иконка приложения\n" +
-                               "• Улучшен дизайн фона (центровка QR)\n" +
-                               "• Исправлено отображение профиля\n" +
-                               "• Меню «О приложении» теперь в карточке\n" +
-                               "• Добавлен дебаг-вход и проверка кода\n" +
-                               "• Новое окно ошибки при входе",
+                        text = "• Поддержка единого облачного бэкенда\n" +
+                                "• Переход на API v1 (/api/qr/)\n" +
+                                "• Улучшена стабильность сетевых запросов\n" +
+                                "• Оптимизация генерации QR-кодов\n" +
+                                "• Подготовлен к масштабированию системы",
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )

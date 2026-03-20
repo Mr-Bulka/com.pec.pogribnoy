@@ -69,13 +69,20 @@ class MainActivity : ComponentActivity() {
                             avatarUri = avatarUriString,
                             mood = mood,
                             onNavigateToProfile = {
-                                navController.navigate("profile")
+                                navController.navigate("profile/$code")
                             }
                         )
                     }
 
-                    composable("profile") {
+                    composable(
+                        route = "profile/{uniqueCode}",
+                        arguments = listOf(
+                            navArgument("uniqueCode") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val code = backStackEntry.arguments?.getString("uniqueCode") ?: ""
                         ProfileScreen(
+                            uniqueCode = code,
                             avatarUri = avatarUriString,
                             onAvatarChange = { newUri ->
                                 avatarUriString = newUri.toString()

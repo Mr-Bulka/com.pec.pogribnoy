@@ -1,50 +1,62 @@
 package com.pec.pogribnoy.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
+import com.pec.pogribnoy.R
+import com.pec.pogribnoy.network.RetrofitClient
+import com.pec.pogribnoy.network.StudentDto
+import com.pec.pogribnoy.ui.components.InitialsAvatar
 import com.pec.pogribnoy.ui.theme.BackgroundLight
 import com.pec.pogribnoy.ui.theme.ButtonTeal
-import com.pec.pogribnoy.ui.theme.TextWhite
 import com.pec.pogribnoy.ui.theme.QrCardBlue
-
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import com.pec.pogribnoy.R
-
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import com.pec.pogribnoy.ui.components.InitialsAvatar
+import com.pec.pogribnoy.ui.theme.TextWhite
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    uniqueCode: String,
     avatarUri: String?,
     onAvatarChange: (Uri) -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    var student by remember { mutableStateOf<StudentDto?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uniqueCode) {
+        scope.launch {
+            try {
+                student = RetrofitClient.apiService.getStudent(uniqueCode)
+                isLoading = false
+            } catch (e: Exception) {
+                isLoading = false
+            }
+        }
+    }
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -58,7 +70,7 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(BackgroundLight)
     ) {
-        // Background Watermark (Centered and Large)
+        // Background Watermark
         Image(
             painter = painterResource(id = R.drawable.bg_qr),
             contentDescription = null,
@@ -83,8 +95,8 @@ fun ProfileScreen(
                 modifier = Modifier
                     .size(160.dp)
                     .clip(RoundedCornerShape(32.dp)),
-                loading = { InitialsAvatar(name = "Погрибной Максим", size = 160.dp) },
-                error = { InitialsAvatar(name = "Погрибной Максим", size = 160.dp) }
+                loading = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 160.dp) },
+                error = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 160.dp) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -116,7 +128,7 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "nFuvUG6qzp3s",
+                            text = uniqueCode,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Normal,
                             color = TextWhite.copy(alpha = 0.7f)
@@ -131,16 +143,20 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    ProfileInfoField(
-                        label = "Образовательная организация",
-                        value = "Государственное образовательное учреждение высшего образования московской области Государственный гуманитарно-технологический университет Промышленно-экономический колледж"
-                    )
-                    ProfileInfoField(label = "ФИО", value = "Погрибной Максим Юрьевич")
-                    ProfileInfoField(label = "Дата выдачи студенческого пропуска", value = "01.09.2023")
-                    ProfileInfoField(label = "Код специальности", value = "09.02.07 «Информационные системы и программирование»")
-                    ProfileInfoField(label = "Курс", value = "3")
+                    if (isLoading) {
+                        CircularProgressIndicator(color = TextWhite, modifier = Modifier.align(Alignment.CenterHorizontally))
+                    } else {
+                        ProfileInfoField(
+                            label = "Образовательная организация",
+                            value = student?.organization ?: "Не указано"
+                        )
+                        ProfileInfoField(label = "ФИО", value = student?.fullName ?: "Не указано")
+                        ProfileInfoField(label = "Дата выдачи студенческого пропуска", value = student?.issueDate ?: "Не указано")
+                        ProfileInfoField(label = "Код специальности", value = student?.specialty ?: "Не указано")
+                        ProfileInfoField(label = "Курс", value = student?.course ?: "Не указано")
+                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "О приложении",
@@ -149,14 +165,14 @@ fun ProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { showAboutDialog = true },
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
         }
 
-        // Top Back Button (placed after Column to be on top)
+        // Top Back Button
         IconButton(
             onClick = onNavigateBack,
             modifier = Modifier
@@ -178,16 +194,15 @@ fun ProfileScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.0.4 (Stable)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.1.0 (Public Cloud Build)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = "• Новая иконка приложения\n" +
-                               "• Улучшен дизайн фона (центровка QR)\n" +
-                               "• Исправлено отображение профиля\n" +
-                               "• Меню «О приложении» теперь в карточке\n" +
-                               "• Добавлен дебаг-вход и проверка кода\n" +
-                               "• Новое окно ошибки при входе",
+                        text = "• Поддержка единого облачного бэкенда\n" +
+                                "• Переход на API v1 (/api/qr/)\n" +
+                                "• Улучшена стабильность сетевых запросов\n" +
+                                "• Оптимизация генерации QR-кодов\n" +
+                                "• Подготовлен к масштабированию системы",
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
