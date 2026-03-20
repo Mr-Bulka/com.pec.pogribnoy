@@ -43,8 +43,8 @@ students_db = {
         hash="hash_m_p_2026"
     ),
     "student1": Student(
-        id="student1",
-        full_name="Иванов Иван Иванович",
+        id="v3X8dK9mLp7q",
+        full_name="Бурова Валерия Александровна",
         organization="ГГТУ Промышленно-экономический колледж",
         issue_date="01.09.2024",
         specialty="09.02.07 «Информационные системы и программирование»",
@@ -52,22 +52,13 @@ students_db = {
         hash="hash_i_i_2026"
     ),
     "student2": Student(
-        id="student2",
-        full_name="Петров Петр Петрович",
+        id="r5Z2fN6hJt4w",
+        full_name="Васильева Екатерина Максимовна",
         organization="ГГТУ Промышленно-экономический колледж",
         issue_date="01.09.2022",
         specialty="09.02.07 «Информационные системы и программирование»",
         course="4",
         hash="hash_p_p_2026"
-    ),
-    "student3": Student(
-        id="student3",
-        full_name="Сидоров Сидор Сидорович",
-        organization="ГГТУ Промышленно-экономический колледж",
-        issue_date="01.09.2023",
-        specialty="09.02.06 «Сетевое и системное администрирование»",
-        course="3",
-        hash="hash_s_s_2026"
     )
 }
 
