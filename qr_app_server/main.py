@@ -42,7 +42,7 @@ students_db = {
         course="3",
         hash="hash_m_p_2026"
     ),
-    "student1": Student(
+    "v3X8dK9mLp7q": Student(
         id="v3X8dK9mLp7q",
         full_name="Бурова Валерия Александровна",
         organization="ГГТУ Промышленно-экономический колледж",
@@ -51,7 +51,7 @@ students_db = {
         course="2",
         hash="hash_i_i_2026"
     ),
-    "student2": Student(
+    "v3X8dK9mLp7q": Student(
         id="r5Z2fN6hJt4w",
         full_name="Васильева Екатерина Максимовна",
         organization="ГГТУ Промышленно-экономический колледж",
