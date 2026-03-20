@@ -46,19 +46,19 @@ students_db = {
         id="v3X8dK9mLp7q",
         full_name="Бурова Валерия Александровна",
         organization="ГГТУ Промышленно-экономический колледж",
-        issue_date="01.09.2024",
+        issue_date="01.09.2023",
         specialty="09.02.07 «Информационные системы и программирование»",
-        course="2",
-        hash="hash_i_i_2026"
+        course="3",
+        hash="hash_v_a_2026"
     ),
     "r5Z2fN6hJt4w": Student(
         id="r5Z2fN6hJt4w",
         full_name="Васильева Екатерина Максимовна",
         organization="ГГТУ Промышленно-экономический колледж",
-        issue_date="01.09.2022",
+        issue_date="01.09.2023",
         specialty="09.02.07 «Информационные системы и программирование»",
-        course="4",
-        hash="hash_p_p_2026"
+        course="3",
+        hash="hash_e_v_2026"
     )
 }
 
