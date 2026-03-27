@@ -107,6 +107,21 @@ app = FastAPI(title="Unified Student Backend", lifespan=lifespan)
 async def root():
     return {"message": "Unified Backend is running"}
 
+@app.get(f"{QR_PREFIX}/db-check")
+async def db_check():
+    try:
+        count = await students_collection.count_documents({})
+        names = await students_collection.distinct("full_name")
+        return {
+            "status": "connected",
+            "database": students_collection.database.name,
+            "collection": students_collection.name,
+            "document_count": count,
+            "student_names": names
+        }
+    except Exception as e:
+        return {"status": "error", "message": "Failed to connect to database", "detail": str(e)}
+
 @app.post(f"{QR_PREFIX}/login")
 async def login(request: LoginRequest):
     code_to_find = "nFuvUG6qzp3s" if request.code == "debug" else request.code
@@ -146,12 +161,17 @@ async def upload_avatar(code: str, file: UploadFile = File(...)):
     data_uri = f"data:{mime_type};base64,{encoded_string}"
     
     # Update in MongoDB
-    await students_collection.update_one(
+    result = await students_collection.update_one(
         {"id": code},
         {"$set": {"avatar_base64": data_uri}}
     )
     
-    return {"message": "Avatar uploaded successfully", "avatar_url": data_uri[:50] + "..."}
+    return {
+        "message": "Avatar upload processed",
+        "matched_count": result.matched_count,
+        "modified_count": result.modified_count,
+        "avatar_preview": data_uri[:50] + "..."
+    }
 
 if __name__ == "__main__":
     import uvicorn
