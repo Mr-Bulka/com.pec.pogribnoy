@@ -34,6 +34,15 @@ import com.pec.pogribnoy.ui.theme.ButtonTeal
 import com.pec.pogribnoy.ui.theme.QrCardBlue
 import com.pec.pogribnoy.ui.theme.TextWhite
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File as JavaFile
+import java.io.FileOutputStream
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +55,8 @@ fun ProfileScreen(
     var student by remember { mutableStateOf<StudentDto?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var isUploading by remember { mutableStateOf(false) }
 
     LaunchedEffect(uniqueCode) {
         scope.launch {
@@ -60,7 +71,31 @@ fun ProfileScreen(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { onAvatarChange(it) }
+        uri?.let { selectedUri ->
+            onAvatarChange(selectedUri)
+            // Trigger server upload
+            scope.launch {
+                try {
+                    isUploading = true
+                    val inputStream = context.contentResolver.openInputStream(selectedUri)
+                    val tempFile = JavaFile.createTempFile("avatar", ".jpg", context.cacheDir)
+                    val outputStream = FileOutputStream(tempFile)
+                    inputStream?.copyTo(outputStream)
+                    
+                    val requestFile = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
+                    val body = MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
+                    
+                    RetrofitClient.apiService.uploadAvatar(uniqueCode, body)
+                    
+                    // Refresh student data to get new avatar_base64
+                    student = RetrofitClient.apiService.getStudent(uniqueCode)
+                    isUploading = false
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    isUploading = false
+                }
+            }
+        }
     }
 
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -88,16 +123,50 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Avatar
-            SubcomposeAsyncImage(
-                model = avatarUri ?: "",
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(160.dp)
-                    .clip(RoundedCornerShape(32.dp)),
-                loading = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 160.dp) },
-                error = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 160.dp) }
-            )
+
+            // Avatar
+            val studentBitmap = remember(student?.avatarBase64) {
+                student?.avatarBase64?.let { base64String ->
+                    try {
+                        val cleanBase64 = if (base64String.contains(",")) {
+                            base64String.substringAfter(",")
+                        } else {
+                            base64String
+                        }
+                        val imageBytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+
+            if (studentBitmap != null) {
+                Image(
+                    bitmap = studentBitmap.asImageBitmap(),
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clip(RoundedCornerShape(32.dp))
+                )
+            } else {
+                SubcomposeAsyncImage(
+                    model = avatarUri ?: "",
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clip(RoundedCornerShape(32.dp)),
+                    loading = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 160.dp) },
+                    error = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 160.dp) }
+                )
+            }
+
+            if (isUploading) {
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(modifier = Modifier.width(160.dp), color = ButtonTeal)
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -194,15 +263,15 @@ fun ProfileScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.1.0 (Public Cloud Build)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.2.0 (Persistent Avatars Build)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = "• Поддержка единого облачного бэкенда\n" +
-                                "• Переход на API v1 (/api/qr/)\n" +
-                                "• Улучшена стабильность сетевых запросов\n" +
-                                "• Оптимизация генерации QR-кодов\n" +
-                                "• Подготовлен к масштабированию системы",
+                        text = "• Полноценная поддержка аватарок профиля\n" +
+                                "• Синхронизация данных с MongoDB Atlas\n" +
+                                "• Постоянное хранение данных (не удаляются при перезагрузке)\n" +
+                                "• Оптимизация отображения Base64 изображений\n" +
+                                "• Исправлены ошибки при смене фото",
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )

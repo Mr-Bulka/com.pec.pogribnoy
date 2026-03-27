@@ -38,7 +38,9 @@ import java.nio.charset.StandardCharsets
 import androidx.compose.ui.res.painterResource
 import com.pec.pogribnoy.R
 import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
 
 import com.pec.pogribnoy.ui.theme.MoodSleepy
 import com.pec.pogribnoy.ui.theme.MoodHappy
@@ -120,16 +122,43 @@ fun QrScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Avatar Area
-                SubcomposeAsyncImage(
-                    model = avatarUri ?: "",
-                    contentDescription = "Profile Picture",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(140.dp)
-                        .clip(RoundedCornerShape(24.dp)),
-                    loading = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 140.dp) },
-                    error = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 140.dp) }
-                )
+                val studentBitmap = remember(student?.avatarBase64) {
+                    student?.avatarBase64?.let { base64String ->
+                        try {
+                            val cleanBase64 = if (base64String.contains(",")) {
+                                base64String.substringAfter(",")
+                            } else {
+                                base64String
+                            }
+                            val imageBytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+
+                if (studentBitmap != null) {
+                    Image(
+                        bitmap = studentBitmap.asImageBitmap(),
+                        contentDescription = "Profile Picture",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(140.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                    )
+                } else {
+                    SubcomposeAsyncImage(
+                        model = avatarUri ?: "",
+                        contentDescription = "Profile Picture",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(140.dp)
+                            .clip(RoundedCornerShape(24.dp)),
+                        loading = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 140.dp) },
+                        error = { InitialsAvatar(name = student?.fullName ?: "Студент", size = 140.dp) }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -209,15 +238,15 @@ fun QrScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.1.0 (Public Cloud Build)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.2.0 (Persistent Avatars Build)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = "• Поддержка единого облачного бэкенда\n" +
-                                "• Переход на API v1 (/api/qr/)\n" +
-                                "• Улучшена стабильность сетевых запросов\n" +
-                                "• Оптимизация генерации QR-кодов\n" +
-                                "• Подготовлен к масштабированию системы",
+                        text = "• Полноценная поддержка аватарок профиля\n" +
+                                "• Синхронизация данных с MongoDB Atlas\n" +
+                                "• Постоянное хранение данных (не удаляются при перезагрузке)\n" +
+                                "• Оптимизация отображения Base64 изображений\n" +
+                                "• Исправлены ошибки при смене фото",
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )

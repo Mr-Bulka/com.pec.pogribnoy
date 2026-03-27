@@ -9,10 +9,18 @@ data class StudentDto(
     @SerializedName("issue_date") val issueDate: String,
     val specialty: String,
     val course: String,
-    val hash: String? = null
+    val hash: String? = null,
+    @SerializedName("avatar_base64") val avatarBase64: String? = null
 )
 
 data class LoginRequestDto(
     val code: String,
     val mood: String? = "neutral"
+)
+
+data class UploadResponseDto(
+    val message: String,
+    val matched_count: Int,
+    val modified_count: Int,
+    @SerializedName("avatar_preview") val avatarPreview: String? = null
 )
