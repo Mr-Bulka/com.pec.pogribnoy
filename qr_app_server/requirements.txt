@@ -2,3 +2,6 @@ fastapi
 uvicorn
 gunicorn
 pydantic
+python-multipart
+motor
+dnspython
