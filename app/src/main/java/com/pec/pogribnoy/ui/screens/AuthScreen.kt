@@ -250,15 +250,15 @@ fun AuthScreen(
             title = { Text(text = "О приложении", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(text = "Версия: 1.1.0 (Public Cloud Build)", fontWeight = FontWeight.SemiBold)
+                    Text(text = "Версия: 1.2.0 (Persistent Avatars Build)", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(text = "Что нового:", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = "• Поддержка единого облачного бэкенда\n" +
-                                "• Переход на API v1 (/api/qr/)\n" +
-                                "• Улучшена стабильность сетевых запросов\n" +
-                                "• Оптимизация генерации QR-кодов\n" +
-                                "• Подготовлен к масштабированию системы",
+                        text = "• Полноценная поддержка аватарок профиля\n" +
+                                "• Синхронизация данных с MongoDB Atlas\n" +
+                                "• Постоянное хранение данных (не удаляются при перезагрузке)\n" +
+                                "• Оптимизация отображения Base64 изображений\n" +
+                                "• Исправлены ошибки при смене фото",
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
