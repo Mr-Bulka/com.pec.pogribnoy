@@ -75,6 +75,16 @@ initial_students_db = {
         course="3",
         hash="hash_a_o_2026",
         avatar_base64=None
+    ),
+    "j7S5hT3kL9mB": Student(
+        id="j7S5hT3kL9mB",
+        full_name="Филлипов Никита Александрович",
+        organization="ГГТУ Промышленно-экономический колледж",
+        issue_date="01.09.2023",
+        specialty="09.02.07 «Информационные системы и программирование»",
+        course="3",
+        hash="hash_n_a_2026",
+        avatar_base64=None
     )
 }
 
@@ -86,16 +96,14 @@ students_collection = db.students
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Migrate mock data if collection is empty
-    count = await students_collection.count_documents({})
-    if count == 0:
-        print("Migrating mock data to MongoDB...")
-        for student_id, student_data in initial_students_db.items():
-            await students_collection.replace_one(
-                {"id": student_id}, 
-                student_data.dict(), 
-                upsert=True
-            )
+    # Startup: Ensure all initial students are migrated to MongoDB
+    print("Checking for missing students to migrate to MongoDB...")
+    for student_id, student_data in initial_students_db.items():
+        # Check if student already exists to avoid overwriting avatars/hashes
+        exists = await students_collection.count_documents({"id": student_id})
+        if exists == 0:
+            print(f"Adding new student: {student_data.full_name}")
+            await students_collection.insert_one(student_data.dict())
     yield
     # Shutdown logic if needed
 
