@@ -106,6 +106,7 @@ MONGODB_URL = os.environ.get("MONGODB_URL", "mongodb+srv://NovaCreator:<db_passw
 client = AsyncIOMotorClient(MONGODB_URL)
 db = client.qr_app_db
 students_collection = db.students
+metadata_collection = db.metadata
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -135,20 +136,37 @@ async def lifespan(app: FastAPI):
             print(f"Adding new student: {student_data.full_name}")
             await students_collection.insert_one(student_data.dict())
     
-    # 4. Start Background Task for Hash Rotation
-    asyncio.create_task(rotate_hashes_task())
+    # 4. Initialize last_rotation_time if not exists
+    print("Ensuring last_rotation_time metadata exists...")
+    meta = await metadata_collection.find_one({"type": "rotation"})
+    if not meta:
+        await metadata_collection.insert_one({
+            "type": "rotation",
+            "last_rotation_time": datetime.utcnow()
+        })
     
     yield
     # Shutdown logic if needed
 
-async def rotate_hashes_task():
-    """Background task to update student hashes every hour."""
-    while True:
-        try:
-            # Wait for 1 hour
-            await asyncio.sleep(3600)
-            print(f"[{datetime.now()}] Rotating student hashes...")
-            
+async def check_and_rotate_hashes():
+    """Checks if 1 hour has passed since last rotation and rotates if needed."""
+    try:
+        meta = await metadata_collection.find_one({"type": "rotation"})
+        if not meta:
+            # Initialization fallback
+            await metadata_collection.insert_one({
+                "type": "rotation",
+                "last_rotation_time": datetime.utcnow()
+            })
+            return
+
+        last_time = meta["last_rotation_time"]
+        # Use UTC for consistency on distributed servers
+        now = datetime.utcnow()
+        diff = (now - last_time).total_seconds()
+        
+        if diff >= 3600:
+            print(f"[{now}] Lazy rotating student hashes (seconds since last: {diff})...")
             # Get all students
             cursor = students_collection.find({})
             async for student in cursor:
@@ -157,10 +175,14 @@ async def rotate_hashes_task():
                     {"_id": student["_id"]},
                     {"$set": {"hash": new_hash}}
                 )
-            print(f"[{datetime.now()}] All hashes updated successfully.")
-        except Exception as e:
-            print(f"Error in rotate_hashes_task: {str(e)}")
-            await asyncio.sleep(60) # Wait a minute before retrying
+            # Update rotation time
+            await metadata_collection.update_one(
+                {"type": "rotation"},
+                {"$set": {"last_rotation_time": now}}
+            )
+            print(f"[{now}] Lazy rotation completed successfully.")
+    except Exception as e:
+        print(f"Error in lazy rotation: {str(e)}")
 
 app = FastAPI(title="Unified Student Backend", lifespan=lifespan)
 
@@ -187,6 +209,7 @@ async def db_check():
 
 @app.post(f"{QR_PREFIX}/login")
 async def login(request: LoginRequest):
+    await check_and_rotate_hashes()
     code_to_find = "nFuvUG6qzp3s" if request.code == "debug" else request.code
     
     student = await students_collection.find_one({"id": code_to_find}, {"_id": 0})
@@ -197,6 +220,7 @@ async def login(request: LoginRequest):
 
 @app.get(f"{QR_PREFIX}/student/{{code}}")
 async def get_student(code: str):
+    await check_and_rotate_hashes()
     student = await students_collection.find_one({"id": code}, {"_id": 0})
     if student:
         return student
