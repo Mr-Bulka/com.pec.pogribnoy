@@ -6,6 +6,9 @@ import base64
 from typing import List, Optional
 from motor.motor_asyncio import AsyncIOMotorClient
 from contextlib import asynccontextmanager
+import asyncio
+import secrets
+from datetime import datetime
 
 # API versioning/prefixes
 QR_PREFIX = "/api/qr"
@@ -106,7 +109,24 @@ students_collection = db.students
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Ensure all initial students are migrated to MongoDB
+    # Startup: 1. Cleanup duplicates (if any)
+    print("Cleaning up duplicate student entries...")
+    # Group by id and keep the first one
+    pipeline = [
+        {"$group": {"_id": "$id", "unique_ids": {"$addToSet": "$_id"}, "count": {"$sum": 1}}},
+        {"$match": {"count": {"$gt": 1}}}
+    ]
+    async for duplicate in students_collection.aggregate(pipeline):
+        # Keep the first, delete the rest
+        to_delete = duplicate["unique_ids"][1:]
+        result = await students_collection.delete_many({"_id": {"$in": to_delete}})
+        print(f"Deleted {result.deleted_count} duplicates for student ID: {duplicate['_id']}")
+
+    # 2. Ensure Unique Index on 'id'
+    print("Ensuring unique index on 'id' field...")
+    await students_collection.create_index("id", unique=True)
+    
+    # 3. Startup: Ensure all initial students are migrated to MongoDB
     print("Checking for missing students to migrate to MongoDB...")
     for student_id, student_data in initial_students_db.items():
         # Check if student already exists to avoid overwriting avatars/hashes
@@ -114,8 +134,33 @@ async def lifespan(app: FastAPI):
         if exists == 0:
             print(f"Adding new student: {student_data.full_name}")
             await students_collection.insert_one(student_data.dict())
+    
+    # 4. Start Background Task for Hash Rotation
+    asyncio.create_task(rotate_hashes_task())
+    
     yield
     # Shutdown logic if needed
+
+async def rotate_hashes_task():
+    """Background task to update student hashes every hour."""
+    while True:
+        try:
+            # Wait for 1 hour
+            await asyncio.sleep(3600)
+            print(f"[{datetime.now()}] Rotating student hashes...")
+            
+            # Get all students
+            cursor = students_collection.find({})
+            async for student in cursor:
+                new_hash = secrets.token_urlsafe(12)
+                await students_collection.update_one(
+                    {"_id": student["_id"]},
+                    {"$set": {"hash": new_hash}}
+                )
+            print(f"[{datetime.now()}] All hashes updated successfully.")
+        except Exception as e:
+            print(f"Error in rotate_hashes_task: {str(e)}")
+            await asyncio.sleep(60) # Wait a minute before retrying
 
 app = FastAPI(title="Unified Student Backend", lifespan=lifespan)
 
