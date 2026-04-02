@@ -8,7 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from contextlib import asynccontextmanager
 import asyncio
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 # API versioning/prefixes
 QR_PREFIX = "/api/qr"
@@ -142,32 +142,43 @@ async def lifespan(app: FastAPI):
     if not meta:
         await metadata_collection.insert_one({
             "type": "rotation",
-            "last_rotation_time": datetime.utcnow()
+            "last_rotation_time": datetime.now(timezone.utc)
         })
+    
+    # 5. Startup: Force rotate hashes on every restart as requested
+    print("Startup: Rotating student hashes on restart...")
+    await check_and_rotate_hashes(force=True)
     
     yield
     # Shutdown logic if needed
 
-async def check_and_rotate_hashes():
+async def check_and_rotate_hashes(force: bool = False):
     """Checks if 1 hour has passed since last rotation and rotates if needed."""
     try:
         meta = await metadata_collection.find_one({"type": "rotation"})
+        now = datetime.now(timezone.utc)
+        
         if not meta:
             # Initialization fallback
             await metadata_collection.insert_one({
                 "type": "rotation",
-                "last_rotation_time": datetime.utcnow()
+                "last_rotation_time": now
             })
-            return
+            if not force: return
 
-        last_time = meta["last_rotation_time"]
-        # Use UTC for consistency on distributed servers
-        now = datetime.utcnow()
-        diff = (now - last_time).total_seconds()
+        last_time = meta.get("last_rotation_time")
         
-        if diff >= 3600:
-            print(f"[{now}] Lazy rotating student hashes (seconds since last: {diff})...")
-            # Get all students
+        # Ensure last_time is timezone-aware for comparison
+        if last_time and last_time.tzinfo is None:
+            last_time = last_time.replace(tzinfo=timezone.utc)
+            
+        diff = (now - last_time).total_seconds() if last_time else 999999
+        
+        if force or diff >= 3600:
+            reason = "Force restart" if force else f"{diff} seconds passed"
+            print(f"[{now}] Rotating student hashes (Reason: {reason})...")
+            
+            # Get all students and update them
             cursor = students_collection.find({})
             async for student in cursor:
                 new_hash = secrets.token_urlsafe(12)
@@ -175,14 +186,20 @@ async def check_and_rotate_hashes():
                     {"_id": student["_id"]},
                     {"$set": {"hash": new_hash}}
                 )
-            # Update rotation time
+            
+            # Update rotation time in DB
             await metadata_collection.update_one(
                 {"type": "rotation"},
-                {"$set": {"last_rotation_time": now}}
+                {"$set": {"last_rotation_time": now}},
+                upsert=True
             )
-            print(f"[{now}] Lazy rotation completed successfully.")
+            print(f"[{now}] Rotation completed successfully.")
+        else:
+            print(f"[{now}] Skipping rotation. Next in {int(3600 - diff)}s.")
+            
     except Exception as e:
-        print(f"Error in lazy rotation: {str(e)}")
+        print(f"Error in hash rotation logic: {str(e)}")
+        # We don't raise here to avoid crashing the request handler
 
 app = FastAPI(title="Unified Student Backend", lifespan=lifespan)
 
@@ -195,13 +212,21 @@ async def root():
 @app.get(f"{QR_PREFIX}/db-check")
 async def db_check():
     try:
+        # Trigger lazy rotation check on DB check too
+        await check_and_rotate_hashes()
+        
         count = await students_collection.count_documents({})
         names = await students_collection.distinct("full_name")
+        meta = await metadata_collection.find_one({"type": "rotation"})
+        
+        last_rotation = meta.get("last_rotation_time") if meta else None
+        
         return {
             "status": "connected",
             "database": students_collection.database.name,
-            "collection": students_collection.name,
             "document_count": count,
+            "last_rotation_time": last_rotation,
+            "server_time_utc": datetime.now(timezone.utc),
             "student_names": names
         }
     except Exception as e:
