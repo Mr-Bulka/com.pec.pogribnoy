@@ -85,6 +85,16 @@ initial_students_db = {
         course="3",
         hash="hash_n_a_2026",
         avatar_base64=None
+    ),
+    "m0P2qR4sT6uV": Student(
+        id="m0P2qR4sT6uV",
+        full_name="Ратникова Анастасия Романовна",
+        organization="ГГТУ Промышленно-экономический колледж",
+        issue_date="01.09.2023",
+        specialty="09.02.07 «Информационные системы и программирование»",
+        course="3",
+        hash="hash_a_r_2026",
+        avatar_base64=None
     )
 }
 
